@@ -165,7 +165,8 @@ var N = 0
 
 function makeChunk () {
   // retrieve chunk from the pool, or create one if necessary.
-  var chunk = chunkPool.pop() || new Chunk()
+//  var chunk = chunkPool.pop() || new Chunk()
+  var chunk = new Chunk()
 
   var j = 0
   for (row = 0; row <= H; ++row) {
@@ -302,10 +303,10 @@ const chunkScope = regl({
     vPosition = position.xyz;
 
     float dist = distance(cameraPos.xz, vPosition.xz);
-    float curveAmount = 0.5;
+    float curveAmount = 0.3;
 
-    gl_Position = projection * view * vec4(position, 1) -
-      vec4( 0.0, dist*curveAmount, 0.0, 0.0 );
+    gl_Position = projection * view * vec4(position - vec3(0.0, dist*curveAmount * 0.0, 0.0), 1);
+   //   vec4( 0.0, dist*curveAmount, 0.0, 0.0 );
   }`,
 
   attributes: {
@@ -352,7 +353,7 @@ const drawSun = regl({
 
   void main() {
     vec3 q = position;
-    q += vec3(0.0, -0.7, 0.0);
+    q += vec3(0.0, 0.1, 0.0);
     q *= vec3(vec2(0.4), -1.0);
     vec4 p = view * vec4(q, 1);
 
@@ -394,15 +395,15 @@ const drawChunk = regl({
 })
 
 regl.frame(({deltaTime, viewportWidth, viewportHeight, tick}) => {
-  regl.clear({color: [0.0, 0.0, 0.0, 1.0]})
+  regl.clear({color: [0.0, 1.0, 0.0, 1.0]})
 
   var view = camera.view()
   var speed = 40.0
   var startZ = 5100
-  var down = -4000
+  var down = -1000
 //  var  tick = 0.0
 
-  var cameraPos = [0, 1000, startZ - tick * speed]
+  var cameraPos = [0, 410, startZ - tick * speed]
   mat4.lookAt(view, cameraPos, [0, down, -startZ - tick * speed], [0, 1, 0])
 
   globalScope(() => {

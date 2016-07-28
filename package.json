@@ -10,6 +10,7 @@
   "devDependencies": {
     "canvas-fit": "^1.5.0",
     "canvas-orbit-camera": "^1.0.2",
+    "gl-camera-pos-from-view-matrix": "^1.0.1",
     "gl-mat4": "^1.1.4",
     "regl": "^0.10.0",
     "standard": "^7.1.2"

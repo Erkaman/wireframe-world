@@ -56,7 +56,8 @@ seed = function(seed) {
 seed(0);
 
 function fade(t) {
-  return t * t * t * (t * (t * 6-15)+10);
+  // return t * t * t * (t * (t * 6-15)+10);
+  return t
 }
 
 function lerp(a,  b,  t) {

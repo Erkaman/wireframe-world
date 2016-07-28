@@ -1,6 +1,27 @@
 const canvas = document.body.appendChild(document.createElement('canvas'))
 const fit = require('canvas-fit')
-const regl = require('regl')(canvas)
+
+var str = `<a href="https://github.com/Erkaman/wireframe-world/"><img style="position: absolute; top: 0; left: 0; border: 0;" src="https://camo.githubusercontent.com/82b228a3648bf44fc1163ef44c62fcc60081495e/68747470733a2f2f73332e616d617a6f6e6177732e636f6d2f6769746875622f726962626f6e732f666f726b6d655f6c6566745f7265645f6161303030302e706e67" alt="Fork me on GitHub" data-canonical-src="https://s3.amazonaws.com/github/ribbons/forkme_left_red_aa0000.png"></a>`
+
+const regl = require('regl')({
+  canvas: canvas,
+  onDone: (err, regl) => {
+    if (err) {
+      document.body.innerHTML = `
+      Failed to initialize the demo because:</br></br>
+      <code>` + err + '</code></br></br>' +
+        `
+      <a href="https://github.com/Erkaman/wireframe-world">But you can find a recorded gif of the demo by clicking here. </a>
+      `
+      throw err
+    }
+  }
+})
+
+var container = document.createElement('div')
+container.innerHTML = str
+document.body.appendChild(container)
+
 window.addEventListener('resize', fit(canvas), false)
 
 const mat4 = require('gl-mat4')

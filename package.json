@@ -1,13 +1,14 @@
 {
-  "name": "regl-wire",
+  "name": "wireframe-world",
   "version": "0.1.0",
-  "description": "regl animations.",
+  "description": "Demo that draws an infinite world",
   "main": "index.js",
   "directories": {
     "example": "example"
   },
   "dependencies": {},
   "devDependencies": {
+    "budo": "^8.3.0",
     "canvas-fit": "^1.5.0",
     "canvas-orbit-camera": "^1.0.2",
     "gl": "^4.0.2",
@@ -19,11 +20,12 @@
   },
   "scripts": {
     "example": "node example/index.js",
-    "test": "standard"
+    "test": "standard",
+    "start": "budo --live --open wireframe_world.js"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Erkaman/regl-recorder.git"
+    "url": "git+https://github.com/Erkaman/wireframe-world.git"
   },
   "keywords": [
     "movie",
@@ -34,7 +36,7 @@
   "author": "Eric Arnebäck",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/Erkaman/regl-recorder/issues"
+    "url": "https://github.com/Erkaman/wireframe-world/issues"
   },
-  "homepage": "https://github.com/Erkaman/regl-recorder"
+  "homepage": "https://github.com/Erkaman/wireframe-world"
 }

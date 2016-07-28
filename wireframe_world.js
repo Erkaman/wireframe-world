@@ -1,17 +1,8 @@
-var createReglRecorder = require('regl-recorder')
-
-const VIDEO_WIDTH = 3840 * 0.2
-const VIDEO_HEIGHT = 2160 * 0.2
-
-const regl = require('regl')(require('gl')(VIDEO_WIDTH, VIDEO_HEIGHT, {preserveDrawingBuffer: true}))
-var recorder = createReglRecorder(regl, 300)
-
-/*
 const canvas = document.body.appendChild(document.createElement('canvas'))
 const fit = require('canvas-fit')
 const regl = require('regl')(canvas)
 window.addEventListener('resize', fit(canvas), false)
-*/
+
 const mat4 = require('gl-mat4')
 const noise2 = require('./noise.js')
 var cameraPosFromViewMatrix = require('gl-camera-pos-from-view-matrix')
@@ -445,6 +436,4 @@ regl.frame(({tick, viewportWidth, viewportHeight}) => {
       chunks.push(makeChunk())
     }
   }
-    recorder.frame(viewportWidth, viewportHeight)
-
 })

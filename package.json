@@ -1,0 +1,37 @@
+{
+  "name": "regl-wire",
+  "version": "0.1.0",
+  "description": "regl animations.",
+  "main": "index.js",
+  "directories": {
+    "example": "example"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "canvas-fit": "^1.5.0",
+    "canvas-orbit-camera": "^1.0.2",
+    "gl-mat4": "^1.1.4",
+    "regl": "^0.10.0",
+    "standard": "^7.1.2"
+  },
+  "scripts": {
+    "example": "node example/index.js",
+    "test": "standard"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Erkaman/regl-recorder.git"
+  },
+  "keywords": [
+    "movie",
+    "recorder",
+    "animation",
+    "regl"
+  ],
+  "author": "Eric Arnebäck",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/Erkaman/regl-recorder/issues"
+  },
+  "homepage": "https://github.com/Erkaman/regl-recorder"
+}

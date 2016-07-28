@@ -11,7 +11,7 @@ var cameraPosFromViewMatrix = require('gl-camera-pos-from-view-matrix')
 camera.rotate([0.0, 0.0], [0.0, -0.4])
 camera.zoom(2000.0)
 
-const Z_FAR = 100000
+const Z_FAR = 120000
 const Z_NEAR = 0.01
 const FOV = Math.PI / 4
 
@@ -96,7 +96,7 @@ function makeSunTexture () {
     [0.9, [247.0, 27.0, 111.0, 255.0]],
     [1.0, [0.0, 0.0, 0.0, 255.0]]
   ]
-//  var ip = 0 // current palette index.
+  //  var ip = 0 // current palette index.
 
   for (y = 0; y < 256; y++) {
     r = []
@@ -161,14 +161,15 @@ function freeChunk (chunk) {
   chunkPool.push(chunk)
 }
 
-function makeChunk (N) {
+var N = 0
+
+function makeChunk () {
   // retrieve chunk from the pool, or create one if necessary.
   var chunk = chunkPool.pop() || new Chunk()
 
   var j = 0
   for (row = 0; row <= H; ++row) {
     z = (row / H) * (zmax - zmin) + zmin
-
     // If N==0, then this is the first chunk that we see.
     // If N==1, it is the second chunk that we see, and so on.
     z += (zmax - zmin) * -N
@@ -194,14 +195,18 @@ function makeChunk (N) {
     }
   }
   chunk.positionBuffer.subdata(chunk.position)
+  chunk.N = N
 
+  N++
   return chunk
 }
 
 var chunks = []
 
-for (i = 0; i < 5; i++) {
-  chunks[i] = makeChunk(i)
+var RENDER_N = 10
+
+for (i = 0; i < RENDER_N; i++) {
+  chunks[i] = makeChunk()
 }
 
 for (row = 0; row <= H; ++row) {
@@ -395,24 +400,37 @@ regl.frame(({deltaTime, viewportWidth, viewportHeight, tick}) => {
   var speed = 40.0
   var startZ = 5100
   var down = -4000
-//  tick = 0.0
-  mat4.lookAt(view, [0, 1000, startZ - tick * speed], [0, down, -startZ - tick * speed], [0, 1, 0])
+//  var  tick = 0.0
+
+  var cameraPos = [0, 1000, startZ - tick * speed]
+  mat4.lookAt(view, cameraPos, [0, down, -startZ - tick * speed], [0, 1, 0])
 
   globalScope(() => {
     drawSun({view: view})
 
     chunkScope({view: view}, () => {
 
-      for (i = 0; i < 5; i++) {
-         drawChunk({ pos:  {buffer: chunks[i].positionBuffer}  })
-        //chunks[i] = makeChunk(i)
+      for (i = 0; i < chunks.length; i++) {
+        drawChunk({ pos:  {buffer: chunks[i].positionBuffer}  })
       }
-
-//      drawChunk({ pos:  {buffer: chunk0.positionBuffer}  })
-//      drawChunk({ pos:  {buffer: chunk1.positionBuffer}  })
-
     })
   })
+
+  if(chunks.length > 0) {
+    /*console.log('N: ', chunks[0].N)
+      console.log('camz: ', cameraPos[2])
+      console.log('camz: ', cameraPos[2])
+    */
+    z = zmin + (zmax - zmin) * -chunks[0].N;
+    if(cameraPos[2] < z) {
+   //   console.log('remove first')
+      freeChunk(chunks.shift())
+      // console.log('size:', chunks.length)
+
+      chunks.push(makeChunk())
+
+    }
+  }
 
   camera.tick()
 })

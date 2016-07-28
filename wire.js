@@ -11,7 +11,7 @@ var cameraPosFromViewMatrix = require('gl-camera-pos-from-view-matrix')
 camera.rotate([0.0, 0.0], [0.0, -0.4])
 camera.zoom(2000.0)
 
-const Z_FAR = 10000
+const Z_FAR = 100000
 const Z_NEAR = 0.01
 const FOV = Math.PI / 4
 
@@ -176,16 +176,16 @@ function makeChunk (N) {
     for (col = 0; col <= W; ++col) {
       x = (col / W) * (xmax - xmin) + xmin
 
-      var f = 0.10974
+      var f = 0.0015974
       var amp = 100.0
 
       var n = 0
 
       for (var i = 0; i < 2; i++) {
-        n += amp * noise2(col * f, row * f)
+        n += amp * noise2(x * f, z * f)
 
         amp *= 6.0
-        f *= 0.8
+        f *= 0.5
       }
 
       y = Math.round(n / 60) * 60
@@ -198,8 +198,11 @@ function makeChunk (N) {
   return chunk
 }
 
-var chunk0 = makeChunk(0)
-var chunk1 = makeChunk(1)
+var chunks = []
+
+for (i = 0; i < 5; i++) {
+  chunks[i] = makeChunk(i)
+}
 
 for (row = 0; row <= H; ++row) {
   z = (row)
@@ -294,7 +297,7 @@ const chunkScope = regl({
     vPosition = position.xyz;
 
     float dist = distance(cameraPos.xz, vPosition.xz);
-    float curveAmount = 0.4;
+    float curveAmount = 0.5;
 
     gl_Position = projection * view * vec4(position, 1) -
       vec4( 0.0, dist*curveAmount, 0.0, 0.0 );
@@ -389,18 +392,24 @@ regl.frame(({deltaTime, viewportWidth, viewportHeight, tick}) => {
   regl.clear({color: [0.0, 0.0, 0.0, 1.0]})
 
   var view = camera.view()
-  var speed = 19.0
+  var speed = 40.0
   var startZ = 5100
   var down = -4000
 //  tick = 0.0
-//  mat4.lookAt(view, [0, 1000, startZ - tick * speed], [0, down, -startZ - tick * speed], [0, 1, 0])
+  mat4.lookAt(view, [0, 1000, startZ - tick * speed], [0, down, -startZ - tick * speed], [0, 1, 0])
 
   globalScope(() => {
     drawSun({view: view})
 
     chunkScope({view: view}, () => {
-      drawChunk({ pos:  {buffer: chunk0.positionBuffer}  })
-      drawChunk({ pos:  {buffer: chunk1.positionBuffer}  })
+
+      for (i = 0; i < 5; i++) {
+         drawChunk({ pos:  {buffer: chunks[i].positionBuffer}  })
+        //chunks[i] = makeChunk(i)
+      }
+
+//      drawChunk({ pos:  {buffer: chunk0.positionBuffer}  })
+//      drawChunk({ pos:  {buffer: chunk1.positionBuffer}  })
 
     })
   })

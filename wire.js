@@ -1,28 +1,31 @@
 const canvas = document.body.appendChild(document.createElement('canvas'))
 const fit = require('canvas-fit')
 const regl = require('../regl')(canvas)
+
 const mat4 = require('gl-mat4')
 const noise2 = require('./noise.js')
-var camera = require('canvas-orbit-camera')(canvas)
 window.addEventListener('resize', fit(canvas), false)
 var cameraPosFromViewMatrix = require('gl-camera-pos-from-view-matrix')
 
-// configure intial camera view.
-camera.rotate([0.0, 0.0], [0.0, -0.4])
-camera.zoom(2000.0)
-
+// projection matrix settings.
 const Z_FAR = 120000
 const Z_NEAR = 0.01
 const FOV = Math.PI / 4
 
+// these variables are used all over the place. Declare them here,
+// once and for all.
 var x
 var z
 var y
 var r
+var i
 
 function makeWireframeTexture () {
   var texData = []
 
+  //
+  // make base image,
+  //
   var lw = 10 // line width
   for (y = 0; y < 256; y++) {
     r = []
@@ -36,10 +39,10 @@ function makeWireframeTexture () {
     texData.push(r)
   }
 
-  // do gaussian blur on the image:
-
+  //
+  // do box filter blur on the base image:
+  //
   var tempTexData = []
-
   for (y = 0; y < 256; y++) {
     r = []
     for (x = 0; x < 256; x++) {
@@ -51,11 +54,11 @@ function makeWireframeTexture () {
           var wx = x + ax
 
           if (wy < 0 || wx < 0 || wy > 255 || wx > 255) {
+            // avoid out-of-range access.
             continue
           }
 
           var d = texData[wy][wx]
-
           c = [
             c[0] + d[0],
             c[1] + d[1],
@@ -64,6 +67,7 @@ function makeWireframeTexture () {
           ]
         }
       }
+
       var u = 49.0
       r.push([c[0] / u, c[1] / u, c[2] / u, c[3] / u])
     }
@@ -85,33 +89,34 @@ function lerp (c0, c1, x) {
 }
 
 function makeSunTexture () {
-  // make texture.
   var texData = []
 
-  // #F6 7D CA = 246, 125, 202
-  // #F73C6F =   247, 27, 111
+  // the color of the circle is based on this palette.
+  // and the palette uses the distance from the center to
+  // smoothly interpolate between colors.
   var palette = [
     [0.0, [246.0, 125.0, 202.0, 255.0]],
     [0.6, [247.0, 27.0, 111.0, 255.0]],
     [0.9, [247.0, 27.0, 111.0, 255.0]],
     [1.0, [0.0, 0.0, 0.0, 255.0]]
   ]
-  //  var ip = 0 // current palette index.
 
   for (y = 0; y < 256; y++) {
-    r = []
+    r = [] // row of pixel data
     for (x = 0; x < 256; x++) {
       // convert (x,y) to range [-1, +1]
       var ox = (x - 128) / 127
       var oy = (y - 128) / 127
 
-      var R = Math.sqrt(ox * ox + oy * oy)
+      var R = Math.sqrt(ox * ox + oy * oy) // distance from center.
       var c
 
       if (R >= 1.0) {
         c = [0.0, 0.0, 0.0, 0.0]
       } else {
         var ip
+        // find the two colors in the palette, which we should
+        // interpolate between.
         for (ip = 0; ip < palette.length - 1; ip++) {
           if (palette[ip][0] <= R && palette[ip + 1][0] >= R) {
             break
@@ -120,7 +125,6 @@ function makeSunTexture () {
 
         var c0 = palette[ip + 0]
         var c1 = palette[ip + 1]
-
         c = lerp(c0[1], c1[1], (R - c0[0]) / (c1[0] - c0[0]))
       }
       r.push(c)
@@ -131,14 +135,13 @@ function makeSunTexture () {
   return texData
 }
 
-// geometry arrays.
-const elements = []
-var texCoord = []
+const elements = [] // faces
+var texCoord = [] // texCoords
 
-const H = 80 // height. row
-const W = 60 // width. col
+const H = 80 // number of squares on the height
+const W = 60 // number of squares on the width
 
-var size = 100.0
+var size = 100.0 // the sidelength of a square.
 var xmin = -(W / 2.0) * size
 var xmax = +(W / 2.0) * size
 var zmin = -(H / 2.0) * size
@@ -155,18 +158,18 @@ function Chunk () {
     usage: 'dynamic'
   })
 }
-
 var chunkPool = []
 function freeChunk (chunk) {
   chunkPool.push(chunk)
 }
 
+// every time we add a new chunk, we increment this number.
+// it is used to determine the z-position of the chunk.
 var N = 0
 
 function makeChunk () {
   // retrieve chunk from the pool, or create one if necessary.
-//  var chunk = chunkPool.pop() || new Chunk()
-  var chunk = new Chunk()
+  var chunk = chunkPool.pop() || new Chunk()
 
   var j = 0
   for (row = 0; row <= H; ++row) {
@@ -180,9 +183,9 @@ function makeChunk () {
 
       var f = 0.0015974
       var amp = 100.0
-
       var n = 0
 
+      // FBM of two octaves.
       for (var i = 0; i < 2; i++) {
         n += amp * noise2(x * f, z * f)
 
@@ -190,26 +193,31 @@ function makeChunk () {
         f *= 0.5
       }
 
+      // make the terrain less smooth looking.
       y = Math.round(n / 60) * 60
 
       chunk.position[j++] = [x, y, z]
     }
   }
+  // upload vertex data to the GPU.
   chunk.positionBuffer.subdata(chunk.position)
+
   chunk.N = N
 
   N++
   return chunk
 }
 
+// render distance of chunks.
+var RENDER_N = 10
 var chunks = []
 
-var RENDER_N = 10
-
+// create all the chunks we need.
 for (i = 0; i < RENDER_N; i++) {
   chunks[i] = makeChunk()
 }
 
+// create texCoords.
 for (row = 0; row <= H; ++row) {
   z = (row)
   for (col = 0; col <= W; ++col) {
@@ -218,6 +226,7 @@ for (row = 0; row <= H; ++row) {
   }
 }
 
+// create faces.
 for (row = 0; row <= (H - 1); ++row) {
   for (col = 0; col <= (W - 1); ++col) {
     i = row * (W + 1) + col
@@ -232,6 +241,7 @@ for (row = 0; row <= (H - 1); ++row) {
   }
 }
 
+// this global scope encapsulates all state common to all drawCommands.
 const globalScope = regl({
   uniforms: {
     projection: ({viewportWidth, viewportHeight}) => {
@@ -243,13 +253,13 @@ const globalScope = regl({
   }
 })
 
+// encapsulates state needed for drawing chunks.
 const chunkScope = regl({
   uniforms: {
-    // View Projection matrices.
     view: (_, props) => props.view,
 
     tex: regl.texture({
-      min: 'nearest mipmap linear',
+      min: 'linear mipmap linear',
       mag: 'linear',
       wrap: 'repeat',
       data: makeWireframeTexture()
@@ -267,15 +277,11 @@ const chunkScope = regl({
   varying vec3 vPosition;
 
   uniform sampler2D tex;
-
   uniform vec3 cameraPos;
   uniform float tick;
 
   void main () {
-    vec3 p = vPosition;
-    vec3 d = vec3(1.0, 0.2, 0.5);
-
-    d = vec3(
+    vec3 d = vec3(
       (sin(tick*0.02 + 0.0) + 1.0) * 0.5 + 0.5,
       (sin(tick*0.02 + 2.0) + 1.0) * 0.5 + 0.5,
       (sin(tick*0.01 + 4.0) + 1.0) * 0.5 + 0.5
@@ -285,17 +291,15 @@ const chunkScope = regl({
     gl_FragColor = vec4(c.xyz, 1.0);
   }`,
   vert: `
-
   precision mediump float;
 
   attribute vec3 position;
   attribute vec2 texCoord;
 
-  uniform mat4 projection, view;
-
   varying vec2 vTexCoord;
   varying vec3 vPosition;
 
+  uniform mat4 projection, view;
   uniform vec3 cameraPos;
 
   void main() {
@@ -305,8 +309,8 @@ const chunkScope = regl({
     float dist = distance(cameraPos.xz, vPosition.xz);
     float curveAmount = 0.3;
 
+    // we lower all vertices down a bit, to create a slightly curved horizon.
     gl_Position = projection * view * vec4(position - vec3(0.0, dist*curveAmount * 0.0, 0.0), 1);
-   //   vec4( 0.0, dist*curveAmount, 0.0, 0.0 );
   }`,
 
   attributes: {
@@ -319,6 +323,7 @@ const drawSun = regl({
   uniforms: {
     view: (_, props) => {
       var m = mat4.copy([], props.view)
+      // the sun should always stay where it is, so do this:
       m[12] = 0
       m[13] = 0
       m[14] = 0
@@ -353,6 +358,7 @@ const drawSun = regl({
 
   void main() {
     vec3 q = position;
+    // scale and translate the sun:
     q += vec3(0.0, 0.1, 0.0);
     q *= vec3(vec2(0.4), -1.0);
     vec4 p = view * vec4(q, 1);
@@ -388,21 +394,25 @@ const drawSun = regl({
   }
 })
 
+// used for drawing a single chunk.
 const drawChunk = regl({
   attributes: {
-    position:  regl.prop('pos')
+    position: regl.prop('pos')
   }
 })
 
-regl.frame(({deltaTime, viewportWidth, viewportHeight, tick}) => {
-  regl.clear({color: [0.0, 1.0, 0.0, 1.0]})
+// make sure that we actually upload all the vertex-data before starting.
+regl._gl.flush()
+regl._gl.finish()
 
-  var view = camera.view()
+regl.frame(({tick}) => {
+  regl.clear({color: [0.0, 0.0, 0.0, 1.0]})
+
+  // create a moving camera.
+  var view = []
   var speed = 40.0
   var startZ = 5100
   var down = -1000
-//  var  tick = 0.0
-
   var cameraPos = [0, 410, startZ - tick * speed]
   mat4.lookAt(view, cameraPos, [0, down, -startZ - tick * speed], [0, 1, 0])
 
@@ -410,28 +420,20 @@ regl.frame(({deltaTime, viewportWidth, viewportHeight, tick}) => {
     drawSun({view: view})
 
     chunkScope({view: view}, () => {
-
       for (i = 0; i < chunks.length; i++) {
-        drawChunk({ pos:  {buffer: chunks[i].positionBuffer}  })
+        drawChunk({pos: {buffer: chunks[i].positionBuffer}})
       }
     })
   })
 
-  if(chunks.length > 0) {
-    /*console.log('N: ', chunks[0].N)
-      console.log('camz: ', cameraPos[2])
-      console.log('camz: ', cameraPos[2])
-    */
-    z = zmin + (zmax - zmin) * -chunks[0].N;
-    if(cameraPos[2] < z) {
-   //   console.log('remove first')
+  // If the first chunk can't be seen anymore, remove it.
+  // Then way back in the horizon we place a new chunk,
+  // so that the world goes on forever.
+  if (chunks.length > 0) {
+    z = zmin + (zmax - zmin) * -chunks[0].N
+    if (cameraPos[2] < z) {
       freeChunk(chunks.shift())
-      // console.log('size:', chunks.length)
-
       chunks.push(makeChunk())
-
     }
   }
-
-  camera.tick()
 })

@@ -13,6 +13,7 @@
     "gl-camera-pos-from-view-matrix": "^1.0.1",
     "gl-mat4": "^1.1.4",
     "regl": "^0.10.0",
+    "regl-recorder": "^0.2.0",
     "standard": "^7.1.2"
   },
   "scripts": {

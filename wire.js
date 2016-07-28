@@ -1,10 +1,10 @@
 const canvas = document.body.appendChild(document.createElement('canvas'))
 const fit = require('canvas-fit')
-const regl = require('../regl')(canvas)
+const regl = require('regl')(canvas)
+window.addEventListener('resize', fit(canvas), false)
 
 const mat4 = require('gl-mat4')
 const noise2 = require('./noise.js')
-window.addEventListener('resize', fit(canvas), false)
 var cameraPosFromViewMatrix = require('gl-camera-pos-from-view-matrix')
 
 // projection matrix settings.

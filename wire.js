@@ -133,7 +133,6 @@ function makeSunTexture () {
 
 // geometry arrays.
 const elements = []
-var position = []
 var texCoord = []
 
 const H = 80 // height. row
@@ -158,45 +157,49 @@ function Chunk () {
 }
 
 var chunkPool = []
-function allocChunk () {
-  return chunkPool.pop() || new Chunk()
-}
 function freeChunk (chunk) {
   chunkPool.push(chunk)
 }
 
-function makeChunk () {
+function makeChunk (N) {
+  // retrieve chunk from the pool, or create one if necessary.
+  var chunk = chunkPool.pop() || new Chunk()
 
-}
+  var j = 0
+  for (row = 0; row <= H; ++row) {
+    z = (row / H) * (zmax - zmin) + zmin
 
-var j = 0
-for (row = 0; row <= H; ++row) {
-  z = (row / H) * (zmax - zmin) + zmin
-  for (col = 0; col <= W; ++col) {
-    x = (col / W) * (xmax - xmin) + xmin
+    // If N==0, then this is the first chunk that we see.
+    // If N==1, it is the second chunk that we see, and so on.
+    z += (zmax - zmin) * -N
 
-    var f = 0.10974
-    var amp = 100.0
+    for (col = 0; col <= W; ++col) {
+      x = (col / W) * (xmax - xmin) + xmin
 
-    var n = 0
+      var f = 0.10974
+      var amp = 100.0
 
-    for (var i = 0; i < 2; i++) {
-      n += amp * noise2(col * f, row * f)
+      var n = 0
 
-      amp *= 6.0
-      f *= 0.8
+      for (var i = 0; i < 2; i++) {
+        n += amp * noise2(col * f, row * f)
+
+        amp *= 6.0
+        f *= 0.8
+      }
+
+      y = Math.round(n / 60) * 60
+
+      chunk.position[j++] = [x, y, z]
     }
-
-    y = Math.round(n / 60) * 60
-    position[j++] = [x, y, z]
   }
+  chunk.positionBuffer.subdata(chunk.position)
+
+  return chunk
 }
 
-const positionBuffer = regl.buffer({
-  length: (H + 1) * (W + 1) * 3 * 4,
-  type: 'float',
-  usage: 'dynamic'
-})
+var chunk0 = makeChunk(0)
+var chunk1 = makeChunk(1)
 
 for (row = 0; row <= H; ++row) {
   z = (row)
@@ -376,13 +379,9 @@ const drawSun = regl({
   }
 })
 
-var usePositionBuffer = positionBuffer
 const drawChunk = regl({
   attributes: {
-    position: {
-      buffer: positionBuffer,
-      normalized: true
-    }
+    position:  regl.prop('pos')
   }
 })
 
@@ -394,16 +393,15 @@ regl.frame(({deltaTime, viewportWidth, viewportHeight, tick}) => {
   var startZ = 5100
   var down = -4000
 //  tick = 0.0
-  mat4.lookAt(view, [0, 1000, startZ - tick * speed], [0, down, -startZ - tick * speed], [0, 1, 0])
-
-  positionBuffer.subdata(position)
+//  mat4.lookAt(view, [0, 1000, startZ - tick * speed], [0, down, -startZ - tick * speed], [0, 1, 0])
 
   globalScope(() => {
     drawSun({view: view})
 
     chunkScope({view: view}, () => {
-      // usePositionBuffer = positionBuffer
-      drawChunk({positionBuffer: positionBuffer})
+      drawChunk({ pos:  {buffer: chunk0.positionBuffer}  })
+      drawChunk({ pos:  {buffer: chunk1.positionBuffer}  })
+
     })
   })
 

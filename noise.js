@@ -1,3 +1,8 @@
+/*
+  This code was taken from here:
+  https://github.com/josephg/noisejs
+*/
+
 function Grad(x,  y,  z) {
   this.x = x; this.y = y; this.z = z;
 }

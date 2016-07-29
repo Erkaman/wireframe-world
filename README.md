@@ -7,6 +7,10 @@ like the below:
 
 ![Animated](images/anim.gif)
 
+And click below for a longer video of the demo:
+
+[![Result](http://img.youtube.com/vi/tE9geTQxgZc/0.jpg)](https://www.youtube.com/watch?v=tE9geTQxgZc)
+
 
 ## Implementation Details
 
